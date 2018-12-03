@@ -5,6 +5,8 @@ import smtplib
 import pandas as pd
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 #For the gmail TSL Port
 SERVER_ADDRESS = 'smtp.gmail.com'
@@ -12,6 +14,7 @@ SERVER_PORT = 587
 
 def get_emails(file, column):
 	data_frame = pd.read_csv(file)
+	#need to change to work for column specified, not just "Email" column
 	return data_frame.Email
 	
 
@@ -23,7 +26,19 @@ def get_message_body(file_name):
 	return data;
 	
 	
-def generate_message(body, from_address, to_address, subject):
+def add_attachment(message, file):
+	attachment = open(file, "rb")
+	
+	part = MIMEBase('application', 'octet-stream')
+	part.set_payload((attachment).read())
+	encoders.encode_base64(part)
+	part.add_header('Content-Disposition', "attachment; filename= %s" % file)
+ 
+	message.attach(part)
+	return message
+
+	
+def generate_message(body, from_address, to_address, subject, attachment_file):
 	message = MIMEMultipart()
 
 	message['From'] = from_address
@@ -31,6 +46,8 @@ def generate_message(body, from_address, to_address, subject):
 	message['Subject'] = subject
 	
 	message.attach(MIMEText(body, 'plain'))	
+	if attachment_file is not 'NO':
+		message = add_attachment(message, attachment_file)
 	return message
 	
 	
@@ -61,10 +78,13 @@ def main():
 	message_file = input("enter the .txt file that conatins the message (only includes the message, no subject, to, or from): ")
 	body = get_message_body(message_file)
 	subject = input("Enter the subject for the email: ")
-
+	
+	attachment_file = input("If you have a file (text, pdf, image, audio, or video), enter the file name with extension below, and if you don't please type 'NO'")
+		
+	
 	# Go through and send the email to everyone on the list
 	for email in emails:
-		message = generate_message(body, my_email, email, subject)
+		message = generate_message(body, my_email, email, subject, attachment_file)
 		send_message(server, message, body, my_email, email)
 	server.quit()
 	
